@@ -1,0 +1,225 @@
+<html>
+<head>
+    <style>
+        /* 定义一些样式，如字体，颜色，边距等 */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+        }
+
+        .message-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .message-item {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+
+        .message-detail {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .message-time {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .message-delete {
+            float: right;
+            font-size: 14px;
+            color: #f00;
+            cursor: pointer;
+        }
+
+        .message-form {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            padding: 10px;
+        }
+
+        .message-input {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            resize: none;
+        }
+
+        .message-button {
+            width: 100%;
+            height: 40px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>留言板</h1>
+    <div class="container">
+        <!-- 显示留言列表的区域 -->
+        <ul class="message-list" id="message-list">
+            <!-- 使用JavaScript动态生成留言项 -->
+        </ul>
+        <!-- 提交留言的表单 -->
+        <form class="message-form" id="message-form">
+            <textarea class="message-input" id="message-input" placeholder="请输入留言内容"></textarea>
+            <button class="message-button" id="message-button" type="submit">发布留言</button>
+        </form>
+    </div>
+    <script>
+        // 获取DOM元素
+        var messageList = document.getElementById("message-list");
+        var messageForm = document.getElementById("message-form");
+        var messageInput = document.getElementById("message-input");
+        var messageButton = document.getElementById("message-button");
+
+        // 定义后端接口的URL
+        var messageUrl = "http://127.0.0.1:8080/message";
+
+        // 定义一个函数，用于获取所有的留言
+        function getMessages() {
+            // 使用XMLHttpRequest对象发送GET请求
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", messageUrl, true);
+            xhr.onload = function() {
+                // 如果请求成功，解析响应数据
+                if (xhr.status == 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    // 如果响应数据的status为200，表示获取留言成功
+                    if (data.status == 200) {
+                        // 清空留言列表的内容
+                        messageList.innerHTML = "";
+                        // 遍历响应数据的data数组，每个元素为一个留言对象
+                        for (var i = 0; i < data.data.length; i++) {
+                            let message = data.data[i];
+                            // 创建一个li元素，用于显示一个留言项
+                            var li = document.createElement("li");
+                            li.className = "message-item";
+                            // 创建一个p元素，用于显示留言的内容
+                            var p = document.createElement("p");
+                            p.className = "message-detail";
+                            p.textContent = message.detail;
+                            // 创建一个span元素，用于显示留言的时间
+                            var span = document.createElement("span");
+                            span.className = "message-time";
+                            span.textContent = message.createAt;
+                            // 创建一个a元素，用于删除留言
+                            var a = document.createElement("a");
+                            a.className = "message-delete";
+                            a.textContent = "删除";
+                            // 为a元素添加点击事件，调用deleteMessage函数，传入留言的id
+                            a.onclick = function() {
+                                deleteMessage(message.id);
+                            };
+                            // 将p，span和a元素添加到li元素中
+                            li.appendChild(p);
+                            li.appendChild(span);
+                            li.appendChild(a);
+                            // 将li元素添加到留言列表中
+                            messageList.appendChild(li);
+                        }
+                    } else {
+                        // 如果响应数据的status不为200，表示获取留言失败，显示错误信息
+                        alert(data.info);
+                    }
+                } else {
+                    // 如果请求失败，显示错误信息
+                    alert("请求失败：" + xhr.status);
+                }
+            };
+            xhr.send();
+        }
+
+        // 定义一个函数，用于添加留言
+        function addMessage() {
+            // 获取留言输入框的值
+            var detail = messageInput.value;
+            // 如果留言内容为空，提示用户输入
+            if (detail == "") {
+                alert("请输入留言内容");
+                return;
+            }
+            // 使用XMLHttpRequest对象发送POST请求
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", messageUrl, true);
+            // 设置请求头，指定内容类型为JSON
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                // 如果请求成功，解析响应数据
+                if (xhr.status == 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    // 如果响应数据的status为200，表示添加留言成功，清空输入框，重新获取留言
+                    if (data.status == 200) {
+                        messageInput.value = "";
+                        getMessages();
+                    } else {
+                        // 如果响应数据的status不为200，表示添加留言失败，显示错误信息
+                        alert(data.info);
+                    }
+                } else {
+                    // 如果请求失败，显示错误信息
+                    alert("请求失败：" + xhr.status);
+                }
+            };
+            // 将留言内容封装成一个对象，转换为JSON字符串，作为请求体发送
+            var message = {
+                detail: detail
+            };
+            xhr.send(JSON.stringify(message));
+        }
+
+        // 定义一个函数，用于删除留言
+        function deleteMessage(id) {
+            // 使用XMLHttpRequest对象发送DELETE请求，URL中附加留言的id
+            var xhr = new XMLHttpRequest();
+            xhr.open("DELETE", messageUrl + "/" + id, true);
+            xhr.onload = function() {
+                // 如果请求成功，解析响应数据
+                if (xhr.status == 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    // 如果响应数据的status为200，表示删除留言成功，重新获取留言
+                    if (data.status == 200) {
+                        getMessages();
+                    } else {
+                        // 如果响应数据的status不为200，表示删除留言失败，显示错误信息
+                        alert(data.info);
+                    }
+                } else {
+                    // 如果请求失败，显示错误信息
+                    alert("请求失败：" + xhr.status);
+                }
+            };
+            xhr.send();
+        }
+
+        // 为提交留言的表单添加提交事件，阻止默认行为，调用addMessage函数
+        messageForm.onsubmit = function(e) {
+            e.preventDefault();
+            addMessage();
+        };
+
+        // 页面加载时，调用getMessages函数，获取所有的留言
+        window.onload = function() {
+            getMessages();
+        };
+    </script>
+</body>
+</html>
